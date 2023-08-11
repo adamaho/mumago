@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"muma/internal/realtime"
+	"mumago/internal/realtime"
 )
 
 func main() {
