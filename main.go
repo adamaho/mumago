@@ -6,6 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"mumago/internal/realtime"
 )
 
 func main() {
@@ -27,7 +29,8 @@ func main() {
 }
 
 func subscribe(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("subscribe"))
+	p := realtime.NewPayload("hello world")
+	w.Write([]byte((*p).Data))
 }
 
 func publish(w http.ResponseWriter, r *http.Request) {
