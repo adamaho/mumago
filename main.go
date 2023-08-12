@@ -16,12 +16,11 @@ func main() {
 
 	r.Use(middleware.Logger)
 
-	ch := make(chan string, 10)
-	defer close(ch)
+	foo := Realtime{Clients: make([]*chan string, 0)}
 
 	r.Group(func(r chi.Router) {
-		r.Get("/subscribe", func(w http.ResponseWriter, r *http.Request) { subscribe(w, r, ch) })
-		r.Post("/publish/{message}", func(w http.ResponseWriter, r *http.Request) { publish(w, r, ch) })
+		r.Get("/subscribe", func(w http.ResponseWriter, r *http.Request) { subscribe(w, r, &foo) })
+		r.Post("/publish/{message}", func(w http.ResponseWriter, r *http.Request) { publish(w, r, &foo) })
 	})
 
 	log.Println("starting server at https://localhost:3000")
@@ -33,8 +32,8 @@ func main() {
 	}
 }
 
-func subscribe(w http.ResponseWriter, r *http.Request, c chan string) {
-	// get the channel from context
+func subscribe(w http.ResponseWriter, r *http.Request, foo *Realtime) {
+	// init the context
 	ctx := r.Context()
 
 	// check if the user supports http2
@@ -45,6 +44,11 @@ func subscribe(w http.ResponseWriter, r *http.Request, c chan string) {
 		return
 	}
 
+	// create channel and add to list of clients
+	ch := make(chan string, 10)
+
+	defer close(ch)
+
 	// set the headers
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintf(w, "Starting streaming...\n")
@@ -54,8 +58,11 @@ func subscribe(w http.ResponseWriter, r *http.Request, c chan string) {
 		select {
 		case <-ctx.Done():
 			fmt.Printf("Client disconnected")
+			// TODO: Remove client from list
+			// TODO: Create unique id for each client to make it easier to remove
+			// TODO: Create Client struct which holds an id and a pointer to a channel
 			return
-		case value := <-c:
+		case value := <-ch:
 			if value != "" {
 				fmt.Fprintf(w, "data: %s\n", value)
 			}
@@ -64,9 +71,11 @@ func subscribe(w http.ResponseWriter, r *http.Request, c chan string) {
 	}
 }
 
-func publish(w http.ResponseWriter, r *http.Request, c chan string) {
+func publish(w http.ResponseWriter, r *http.Request, foo *Realtime) {
 	msg := chi.URLParam(r, "message")
-	c <- msg
+	for _, ch := range foo.Clients {
+		*ch <- msg
+	}
 	fmt.Fprintf(w, "Message sent: %s", msg)
 }
 
@@ -96,16 +105,12 @@ func NewJsonPayload(j struct{}) (*Payload, error) {
 	return &Payload{Data: d}, nil
 }
 
-// Represents the client that recieves messages in the channel
-type Sender struct {
-	rx chan<- Payload
-}
-
 // Holds all of the active client connections
-type JsonPatchStream struct {
-	Clients []Sender
+type Realtime struct {
+	Clients []*chan string
 }
 
-func (j JsonPatchStream) Subscribe() string {
-	return "Streammmmmm"
+// Adds a new client to the realtime sync
+func (r *Realtime) AddClient(ch *chan string) {
+	r.Clients = append(r.Clients, ch)
 }
