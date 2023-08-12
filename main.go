@@ -16,11 +16,11 @@ func main() {
 
 	r.Use(middleware.Logger)
 
-	foo := Realtime{Clients: make([]*chan string, 0)}
+	rt := Realtime{Clients: make([]*chan string, 0)}
 
 	r.Group(func(r chi.Router) {
-		r.Get("/subscribe", func(w http.ResponseWriter, r *http.Request) { subscribe(w, r, &foo) })
-		r.Post("/publish/{message}", func(w http.ResponseWriter, r *http.Request) { publish(w, r, &foo) })
+		r.Get("/subscribe", func(w http.ResponseWriter, r *http.Request) { subscribe(w, r, &rt) })
+		r.Post("/publish/{message}", func(w http.ResponseWriter, r *http.Request) { publish(w, r, &rt) })
 	})
 
 	log.Println("starting server at https://localhost:3000")
@@ -32,7 +32,7 @@ func main() {
 	}
 }
 
-func subscribe(w http.ResponseWriter, r *http.Request, foo *Realtime) {
+func subscribe(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 	// init the context
 	ctx := r.Context()
 
@@ -46,6 +46,7 @@ func subscribe(w http.ResponseWriter, r *http.Request, foo *Realtime) {
 
 	// create channel and add to list of clients
 	ch := make(chan string, 10)
+	rt.AddClient(&ch)
 
 	defer close(ch)
 
@@ -71,9 +72,9 @@ func subscribe(w http.ResponseWriter, r *http.Request, foo *Realtime) {
 	}
 }
 
-func publish(w http.ResponseWriter, r *http.Request, foo *Realtime) {
+func publish(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 	msg := chi.URLParam(r, "message")
-	for _, ch := range foo.Clients {
+	for _, ch := range rt.Clients {
 		*ch <- msg
 	}
 	fmt.Fprintf(w, "Message sent: %s", msg)
