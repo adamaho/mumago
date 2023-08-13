@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 
 	r.Use(middleware.Logger)
 
-	rt := Realtime{Clients: make([]*chan string, 0)}
+	rt := Realtime{Clients: make([]*Client, 0)}
 
 	r.Group(func(r chi.Router) {
 		r.Get("/subscribe", func(w http.ResponseWriter, r *http.Request) { subscribe(w, r, &rt) })
@@ -46,7 +46,7 @@ func subscribe(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 
 	// create channel and add to list of clients
 	ch := make(chan string, 10)
-	rt.AddClient(&ch)
+	clientID := rt.AddClient(&ch)
 
 	defer close(ch)
 
@@ -59,9 +59,7 @@ func subscribe(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 		select {
 		case <-ctx.Done():
 			fmt.Printf("Client disconnected")
-			// TODO: Remove client from list
-			// TODO: Create unique id for each client to make it easier to remove
-			// TODO: Create Client struct which holds an id and a pointer to a channel
+			rt.RemoveClient(clientID)
 			return
 		case value := <-ch:
 			if value != "" {
@@ -74,17 +72,13 @@ func subscribe(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 
 func publish(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 	msg := chi.URLParam(r, "message")
-	for _, ch := range rt.Clients {
-		*ch <- msg
+	for _, client := range rt.Clients {
+		*client.channel <- msg
 	}
 	fmt.Fprintf(w, "Message sent: %s", msg)
 }
 
-// /////////////////////////////////////////////////////////////////
-func sleep(t time.Duration) {
-	time.Sleep(t * time.Second)
-}
-
+// ///////////////////////////////////////////////////////////////
 type Payload struct {
 	Data []byte
 }
@@ -106,12 +100,34 @@ func NewJsonPayload(j struct{}) (*Payload, error) {
 	return &Payload{Data: d}, nil
 }
 
-// Holds all of the active client connections
-type Realtime struct {
-	Clients []*chan string
+// Represents a single client connection
+type Client struct {
+	id      uuid.UUID
+	channel *chan string
 }
 
-// Adds a new client to the realtime sync
-func (r *Realtime) AddClient(ch *chan string) {
-	r.Clients = append(r.Clients, ch)
+// Holds all of the active client connections
+type Realtime struct {
+	Clients []*Client
+}
+
+// Adds a new client to the connection list
+func (r *Realtime) AddClient(ch *chan string) uuid.UUID {
+	id := uuid.New()
+	client := Client{id: id, channel: ch}
+	r.Clients = append(r.Clients, &client)
+	return id
+}
+
+// Removes a client from the connection list
+func (r *Realtime) RemoveClient(clientID uuid.UUID) {
+	newClients := make([]*Client, 0)
+
+	for _, c := range r.Clients {
+		if c.id != clientID {
+			newClients = append(newClients, c)
+		}
+	}
+
+	r.Clients = newClients
 }
