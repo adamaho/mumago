@@ -58,7 +58,7 @@ func subscribe(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("Client disconnected")
+			fmt.Printf("Client disconnected\n")
 			rt.RemoveClient(clientID)
 			return
 		case value := <-ch:
@@ -78,7 +78,6 @@ func publish(w http.ResponseWriter, r *http.Request, rt *Realtime) {
 	fmt.Fprintf(w, "Message sent: %s", msg)
 }
 
-// ///////////////////////////////////////////////////////////////
 type Payload struct {
 	Data []byte
 }
