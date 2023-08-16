@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,11 +17,10 @@ func main() {
 
 	r.Use(middleware.Logger)
 
-	rt := realtime.Realtime{Clients: make([]*realtime.Client, 0)}
-
 	r.Group(func(r chi.Router) {
-		r.Get("/subscribe", func(w http.ResponseWriter, r *http.Request) { subscribe(w, r, &rt) })
-		r.Post("/publish/{message}", func(w http.ResponseWriter, r *http.Request) { publish(w, r, &rt) })
+		rt := realtime.New()
+		r.Get("/todos", func(w http.ResponseWriter, r *http.Request) { getTodos(w, r, &rt) })
+		r.Post("/todos/{message}", func(w http.ResponseWriter, r *http.Request) { createTodo(w, r, &rt) })
 	})
 
 	log.Println("starting todos server at https://localhost:3000")
@@ -32,45 +32,22 @@ func main() {
 	}
 }
 
-func subscribe(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime) {
-	// init the context
-	ctx := r.Context()
-
-	// check if the user supports http2
-	flusher, ok := w.(http.Flusher)
-
-	if !ok {
-		http.Error(w, "Streaming not supported!", http.StatusInternalServerError)
-		return
-	}
-
-	// create channel and add to list of clients
-	ch := make(chan string, 10)
-	clientID := rt.AddClient(&ch)
-
-	defer close(ch)
-
-	// set the headers
-	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, "Starting streaming...\n")
-	flusher.Flush()
-
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Printf("Client disconnected\n")
-			rt.RemoveClient(clientID)
-			return
-		case value := <-ch:
-			if value != "" {
-				fmt.Fprintf(w, "data: %s\n", value)
-			}
-			flusher.Flush()
-		}
-	}
+type Todo struct {
+	TodoId int    `json:"todo_id"`
+	Task   string `json:"task"`
 }
 
-func publish(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime) {
+func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime) {
+	todo := Todo{TodoId: 1, Task: "Hello world"}
+	d, err := json.Marshal(todo)
+	if err != nil {
+		http.Error(w, "Failed to parse json", http.StatusInternalServerError)
+		return
+	}
+	rt.Stream(w, r, d)
+}
+
+func createTodo(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime) {
 	msg := chi.URLParam(r, "message")
 	for _, client := range rt.Clients {
 		*client.Channel <- msg
