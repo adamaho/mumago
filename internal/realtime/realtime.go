@@ -11,7 +11,7 @@ import (
 // Represents a single client connection
 type Client struct {
 	id      uuid.UUID
-	Channel *chan string
+	Channel *chan []byte
 }
 
 // Holds all of the active client connections
@@ -44,7 +44,7 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 		return
 	}
 
-	ch := make(chan string, 10)
+	ch := make(chan []byte, 10)
 	defer close(ch)
 
 	clientID := rt.AddClient(&ch)
@@ -61,9 +61,8 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 			rt.RemoveClient(clientID)
 			return
 		case value := <-ch:
-			if value != "" {
-				// TODO: Make this support a jsonpatch diff value from the channel
-				fmt.Fprintf(w, "data: %s\n", value)
+			if len(value) > 0 {
+				fmt.Fprintf(w, "%s\n", value)
 			}
 			flusher.Flush()
 		}
@@ -71,7 +70,7 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 }
 
 // Adds a new client to the connection list
-func (rt *Realtime) AddClient(ch *chan string) uuid.UUID {
+func (rt *Realtime) AddClient(ch *chan []byte) uuid.UUID {
 	id := uuid.New()
 	client := Client{id: id, Channel: ch}
 	rt.Clients = append(rt.Clients, &client)
