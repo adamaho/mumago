@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -75,7 +74,6 @@ func createTodo(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, t
 	patchJson, err := json.Marshal(patch)
 
 	if err != nil {
-		fmt.Println("err", err)
 		http.Error(w, "Failed to marshal json", http.StatusInternalServerError)
 		return
 	}
