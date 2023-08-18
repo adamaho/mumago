@@ -17,6 +17,7 @@ type Client struct {
 // Holds all of the active client connections
 type Realtime struct {
 	Clients []*Client
+	// TODO add support for storing the data? is that needed?
 }
 
 // Creates a new instance of realtime

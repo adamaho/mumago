@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	"github.com/mattbaird/jsonpatch"
 
 	"mumago/internal/realtime"
 )
@@ -17,10 +18,20 @@ type Todo struct {
 	Task   string    `json:"task"`
 }
 
+type Todos struct {
+	Data []Todo `json:"data"`
+}
+
+// Adds a todo to the database
+func (t *Todos) AddTodo(todo Todo) Todos {
+	t.Data = append(t.Data, todo)
+	return *t
+}
+
 func main() {
 	r := chi.NewRouter()
 
-	todos := make([]Todo, 0)
+	todos := Todos{Data: make([]Todo, 0)}
 
 	r.Use(middleware.Logger)
 
@@ -39,7 +50,8 @@ func main() {
 	}
 }
 
-func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *[]Todo) {
+func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *Todos) {
+	// TODO: connect to a db
 	d, err := json.Marshal(todos)
 	if err != nil {
 		http.Error(w, "Failed to parse json", http.StatusInternalServerError)
@@ -48,12 +60,18 @@ func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, tod
 	rt.Stream(w, r, d)
 }
 
-func createTodo(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *[]Todo) {
+func createTodo(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *Todos) {
+	// TODO: connect to a db
 	task := chi.URLParam(r, "task")
 	t := Todo{TodoId: uuid.New(), Task: task}
-	*todos = append(*todos, t)
 
-	tJson, err := json.Marshal(t)
+	originalJson, _ := json.Marshal(*todos)
+
+	target := todos.AddTodo(t)
+	targetJson, _ := json.Marshal(target)
+
+	patch, _ := jsonpatch.CreatePatch(originalJson, targetJson)
+	patchJson, err := json.Marshal(patch)
 
 	if err != nil {
 		http.Error(w, "Failed to marshal json", http.StatusInternalServerError)
@@ -61,6 +79,6 @@ func createTodo(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, t
 	}
 
 	for _, client := range rt.Clients {
-		*client.Channel <- tJson
+		*client.Channel <- patchJson
 	}
 }
