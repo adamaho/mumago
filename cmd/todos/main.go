@@ -52,6 +52,7 @@ func main() {
 }
 
 func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *Todos) {
+	// TODO: connect to a db
 	d, err := json.Marshal(todos)
 	if err != nil {
 		http.Error(w, "Failed to parse json", http.StatusInternalServerError)
@@ -61,6 +62,7 @@ func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, tod
 }
 
 func createTodo(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *Todos) {
+	// TODO: connect to a db
 	task := chi.URLParam(r, "task")
 	t := Todo{TodoId: uuid.New(), Task: task}
 
