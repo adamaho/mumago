@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
-	"github.com/mattbaird/jsonpatch"
 
 	"mumago/internal/db"
 	"mumago/internal/realtime"
@@ -54,7 +53,7 @@ func main() {
 }
 
 func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *Todos) {
-	// TODO: connect to a db
+	// TODO: get todos from db instead
 	d, err := json.Marshal(todos)
 	if err != nil {
 		http.Error(w, "Failed to parse json", http.StatusInternalServerError)
@@ -64,24 +63,11 @@ func getTodos(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, tod
 }
 
 func createTodo(w http.ResponseWriter, r *http.Request, rt *realtime.Realtime, todos *Todos) {
-	// TODO: connect to a db
 	task := chi.URLParam(r, "task")
-	t := Todo{TodoId: uuid.New(), Task: task}
+	ts := todos.AddTodo(Todo{TodoId: uuid.New(), Task: task})
+	target, _ := json.Marshal(ts)
 
-	originalJson, _ := json.Marshal(*todos)
+	// TODO: handle error
 
-	target := todos.AddTodo(t)
-	targetJson, _ := json.Marshal(target)
-
-	patch, _ := jsonpatch.CreatePatch(originalJson, targetJson)
-	patchJson, err := json.Marshal(patch)
-
-	if err != nil {
-		http.Error(w, "Failed to marshal json", http.StatusInternalServerError)
-		return
-	}
-
-	for _, client := range rt.Clients {
-		*client.Channel <- patchJson
-	}
+	rt.PublishPatch(w, target)
 }
