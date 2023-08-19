@@ -41,6 +41,7 @@ func NewTodosApi(db *gorm.DB, rt *realtime.Realtime, todos *Todos) TodosApi {
 	return TodosApi{db, rt, todos}
 }
 
+// Returns all todos or an optional stream of todos
 func (t *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 	// TODO: Get todos from db
 	d, err := json.Marshal(t.todos)
@@ -51,6 +52,7 @@ func (t *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 	t.rt.Stream(w, req, d)
 }
 
+// Creates a new todo
 func (t *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	// TODO: create todo in db
 	task := chi.URLParam(req, "task")
