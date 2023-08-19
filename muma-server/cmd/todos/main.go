@@ -7,9 +7,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"mumago/internal/api"
-	"mumago/internal/db"
-	"mumago/internal/realtime"
+	"muma/internal/api"
+	"muma/internal/db"
+	"muma/internal/realtime"
 )
 
 func main() {

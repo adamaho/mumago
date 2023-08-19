@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"mumago/internal/db"
-	"mumago/internal/realtime"
+	"muma/internal/db"
+	"muma/internal/realtime"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -28,16 +28,16 @@ func NewTodosApi(db *gorm.DB, rt *realtime.Realtime) TodosApi {
 func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 	todosData, err := db.GetTodos(tApi.db)
 
-	// TODO: handle error here
-
-	todos := Todos{Data: todosData}
-
-	todosJson, err := json.Marshal(todos)
-
-	// TODO: figure out a common way to handle json and json errors
-
 	if err != nil {
 		http.Error(w, "Failed to get todos from db", http.StatusInternalServerError)
+		return
+	}
+
+	todos := Todos{Data: todosData}
+	todosJson, err := json.Marshal(todos)
+
+	if err != nil {
+		http.Error(w, "Failed to marshal todos to json", http.StatusInternalServerError)
 		return
 	}
 

@@ -1,4 +1,4 @@
-# mumago-server
+# muma-server
 
 A try at realtime sync with json patch in golang.
 
