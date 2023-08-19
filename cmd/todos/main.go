@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mattbaird/jsonpatch"
 
+	"mumago/internal/db"
 	"mumago/internal/realtime"
 )
 
@@ -32,6 +33,8 @@ func main() {
 	r := chi.NewRouter()
 
 	todos := Todos{Data: make([]Todo, 0)}
+
+	db.New().Connect()
 
 	r.Use(middleware.Logger)
 
