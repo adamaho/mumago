@@ -16,13 +16,12 @@ func main() {
 	r := chi.NewRouter()
 
 	db := db.New().Connect()
-	todos := api.NewTodos()
 
 	r.Use(middleware.Logger)
 
 	r.Group(func(r chi.Router) {
 		rt := realtime.New()
-		todosApi := api.NewTodosApi(db, &rt, &todos)
+		todosApi := api.NewTodosApi(db, &rt)
 
 		r.Get("/todos", todosApi.GetTodos)
 		r.Post("/todos/{task}", todosApi.CreateTodo)

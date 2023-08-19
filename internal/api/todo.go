@@ -2,64 +2,91 @@ package api
 
 import (
 	"encoding/json"
+	"mumago/internal/db"
 	"mumago/internal/realtime"
 	"net/http"
 
-	"github.com/go-chi/chi"
-	"github.com/google/uuid"
+	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
-type Todo struct {
-	TodoId uuid.UUID `json:"todo_id"`
-	Task   string    `json:"task"`
-}
-
 type Todos struct {
-	Data []Todo `json:"data"`
-}
-
-// Creates a new Todos struct
-func NewTodos() Todos {
-	return Todos{Data: make([]Todo, 0)}
-}
-
-// Adds a todo to the database
-func (t *Todos) AddTodo(todo Todo) Todos {
-	t.Data = append(t.Data, todo)
-	return *t
+	Data []db.Todo `json:"data"`
 }
 
 type TodosApi struct {
-	db    *gorm.DB
-	rt    *realtime.Realtime
-	todos *Todos
+	db *gorm.DB
+	rt *realtime.Realtime
 }
 
 // Creates a new TodosApi instance
-func NewTodosApi(db *gorm.DB, rt *realtime.Realtime, todos *Todos) TodosApi {
-	return TodosApi{db, rt, todos}
+func NewTodosApi(db *gorm.DB, rt *realtime.Realtime) TodosApi {
+	return TodosApi{db, rt}
 }
 
 // Returns all todos or an optional stream of todos
-func (t *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
-	// TODO: Get todos from db
-	d, err := json.Marshal(t.todos)
+func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
+	todosData, err := db.GetTodos(tApi.db)
+
+	// TODO: handle error here
+
+	todos := Todos{Data: todosData}
+
+	todosJson, err := json.Marshal(todos)
+
+	// TODO: figure out a common way to handle json and json errors
+
 	if err != nil {
-		http.Error(w, "Failed to parse json", http.StatusInternalServerError)
+		http.Error(w, "Failed to get todos from db", http.StatusInternalServerError)
 		return
 	}
-	t.rt.Stream(w, req, d)
+
+	tApi.rt.Stream(w, req, todosJson)
 }
 
 // Creates a new todo
-func (t *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
-	// TODO: create todo in db
+func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	task := chi.URLParam(req, "task")
-	ts := t.todos.AddTodo(Todo{TodoId: uuid.New(), Task: task})
-	target, _ := json.Marshal(ts)
 
-	// TODO: handle error
+	// create the todo
+	todoID, err := db.CreateTodo(tApi.db, task)
 
-	t.rt.PublishPatch(w, target)
+	if err != nil {
+		http.Error(w, "Failed to create todo", http.StatusInternalServerError)
+		return
+	}
+
+	// fetch all of the todos from the db
+	targetDb, err := db.GetTodos(tApi.db)
+
+	if err != nil {
+		http.Error(w, "Failed to get new todos from db", http.StatusInternalServerError)
+		return
+	}
+
+	// marshal todos to json
+	targetStruct := Todos{Data: targetDb}
+	target, err := json.Marshal(targetStruct)
+
+	if err != nil {
+		http.Error(w, "Failed to marshal new todos to json", http.StatusInternalServerError)
+	}
+
+	tApi.rt.PublishPatch(target)
+
+	// fetch the new todo from the db to return to the user
+	newTodo, err := db.GetTodoByID(tApi.db, todoID)
+
+	if err != nil {
+		http.Error(w, "Failed to get new todo from db", http.StatusInternalServerError)
+	}
+
+	newTodoJson, err := json.Marshal(newTodo)
+
+	if err != nil {
+		http.Error(w, "Failed to marshal new todo to json", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(newTodoJson)
 }
