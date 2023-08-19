@@ -6,7 +6,7 @@ import (
 	"mumago/internal/realtime"
 	"net/http"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
 
@@ -15,14 +15,13 @@ type Todos struct {
 }
 
 type TodosApi struct {
-	db    *gorm.DB
-	rt    *realtime.Realtime
-	todos *Todos
+	db *gorm.DB
+	rt *realtime.Realtime
 }
 
 // Creates a new TodosApi instance
-func NewTodosApi(db *gorm.DB, rt *realtime.Realtime, todos *Todos) TodosApi {
-	return TodosApi{db, rt, todos}
+func NewTodosApi(db *gorm.DB, rt *realtime.Realtime) TodosApi {
+	return TodosApi{db, rt}
 }
 
 // Returns all todos or an optional stream of todos
@@ -57,10 +56,8 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// fetch the new todo from the db to return to the user
-
 	// fetch all of the todos from the db
-	targetData, err := db.GetTodos(tApi.db)
+	targetDb, err := db.GetTodos(tApi.db)
 
 	if err != nil {
 		http.Error(w, "Failed to get new todos from db", http.StatusInternalServerError)
@@ -68,11 +65,28 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// marshal todos to json
-	target, err := json.Marshal(targetData)
+	targetStruct := Todos{Data: targetDb}
+	target, err := json.Marshal(targetStruct)
 
 	if err != nil {
 		http.Error(w, "Failed to marshal new todos to json", http.StatusInternalServerError)
 	}
 
-	tApi.rt.PublishPatch(w, target)
+	tApi.rt.PublishPatch(target)
+
+	// fetch the new todo from the db to return to the user
+	newTodo, err := db.GetTodoByID(tApi.db, todoID)
+
+	if err != nil {
+		http.Error(w, "Failed to get new todo from db", http.StatusInternalServerError)
+	}
+
+	newTodoJson, err := json.Marshal(newTodo)
+
+	if err != nil {
+		http.Error(w, "Failed to marshal new todo to json", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(newTodoJson)
 }

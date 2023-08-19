@@ -3,6 +3,7 @@ package realtime
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -95,12 +96,12 @@ func (rt *Realtime) RemoveClient(clientID uuid.UUID) {
 }
 
 // Creates a new json patch
-func (rt *Realtime) PublishPatch(w http.ResponseWriter, target json.RawMessage) {
+func (rt *Realtime) PublishPatch(target json.RawMessage) {
 	patch, _ := jsonpatch.CreatePatch(rt.Data, target)
 	patchJson, err := json.Marshal(patch)
 
 	if err != nil {
-		http.Error(w, "Failed to marshal todo patch to json", http.StatusInternalServerError)
+		log.Print("Failed to marshal json for patch")
 		return
 	}
 

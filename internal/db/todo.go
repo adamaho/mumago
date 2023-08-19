@@ -38,4 +38,14 @@ func GetTodos(db *gorm.DB) ([]Todo, error) {
 }
 
 // Gets a single todo by ID
-func GetTodoByID(db *gorm.DB, todoID uint) (Todo error) {}
+func GetTodoByID(db *gorm.DB, todoID uint) (Todo, error) {
+	var todo Todo
+	result := db.First(&todo, todoID)
+
+	if result.Error != nil {
+		log.Print("Failed to get todo with id:", todoID)
+		return Todo{}, result.Error
+	}
+
+	return todo, nil
+}
