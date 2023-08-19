@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/mattbaird/jsonpatch"
 )
 
 // Represents a single client connection
@@ -17,7 +18,7 @@ type Client struct {
 // Holds all of the active client connections
 type Realtime struct {
 	Clients []*Client
-	// TODO add support for storing the data? is that needed?
+	Data    json.RawMessage
 }
 
 // Creates a new instance of realtime
@@ -56,6 +57,8 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 	fmt.Fprintf(w, "%s\n", d)
 	flusher.Flush()
 
+	rt.Data = d
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -89,4 +92,21 @@ func (rt *Realtime) RemoveClient(clientID uuid.UUID) {
 	}
 
 	rt.Clients = newClients
+}
+
+// Creates a new json patch
+func (rt *Realtime) PublishPatch(w http.ResponseWriter, target json.RawMessage) {
+	patch, _ := jsonpatch.CreatePatch(rt.Data, target)
+	patchJson, err := json.Marshal(patch)
+
+	if err != nil {
+		http.Error(w, "Failed to marshal json", http.StatusInternalServerError)
+		return
+	}
+
+	for _, client := range rt.Clients {
+		*client.Channel <- patchJson
+	}
+
+	rt.Data = target
 }
