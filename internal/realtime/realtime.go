@@ -100,7 +100,7 @@ func (rt *Realtime) PublishPatch(w http.ResponseWriter, target json.RawMessage) 
 	patchJson, err := json.Marshal(patch)
 
 	if err != nil {
-		http.Error(w, "Failed to marshal json", http.StatusInternalServerError)
+		http.Error(w, "Failed to marshal todo patch to json", http.StatusInternalServerError)
 		return
 	}
 

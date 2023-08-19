@@ -36,3 +36,6 @@ func GetTodos(db *gorm.DB) ([]Todo, error) {
 
 	return todos, nil
 }
+
+// Gets a single todo by ID
+func GetTodoByID(db *gorm.DB, todoID uint) (Todo error) {}
