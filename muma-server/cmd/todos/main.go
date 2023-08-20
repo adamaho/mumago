@@ -9,7 +9,6 @@ import (
 
 	"muma/internal/api"
 	"muma/internal/db"
-	"muma/internal/realtime"
 )
 
 func main() {
@@ -20,11 +19,10 @@ func main() {
 	r.Use(middleware.Logger)
 
 	r.Group(func(r chi.Router) {
-		rt := realtime.New()
-		todosApi := api.NewTodosApi(db, &rt)
+		todosApi := api.NewTodosApi(db)
 
-		r.Get("/todos", todosApi.GetTodos)
-		r.Post("/todos/{task}", todosApi.CreateTodo)
+		r.Get("/todos/{sessionID}", todosApi.GetTodos)
+		r.Post("/todos/{sessionID}/{task}", todosApi.CreateTodo)
 	})
 
 	log.Println("starting todos server at https://localhost:3000")

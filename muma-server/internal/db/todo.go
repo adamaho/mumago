@@ -7,13 +7,14 @@ import (
 )
 
 type Todo struct {
-	ID   uint   `json:"todo_id" gorm:"primaryKey"`
-	Task string `json:"task"`
+	ID        uint   `json:"todo_id" gorm:"primaryKey"`
+	Task      string `json:"task"`
+	SessionID string `json:"session_id"`
 }
 
 // Creates a new todo
-func CreateTodo(db *gorm.DB, task string) (uint, error) {
-	t := Todo{Task: task}
+func CreateTodo(db *gorm.DB, sessionID string, task string) (uint, error) {
+	t := Todo{Task: task, SessionID: sessionID}
 	result := db.Create(&t)
 
 	if result.Error != nil {
@@ -30,7 +31,20 @@ func GetTodos(db *gorm.DB) ([]Todo, error) {
 	result := db.Find(&todos)
 
 	if result.Error != nil {
-		log.Print("Failed to create new todo:", result.Error)
+		log.Print("Failed to get todos:", result.Error)
+		return nil, result.Error
+	}
+
+	return todos, nil
+}
+
+// Gets all todos for a specific sessionID
+func GetTodosForSession(db *gorm.DB, sessionID string) ([]Todo, error) {
+	var todos []Todo
+	result := db.Find(&todos)
+
+	if result.Error != nil {
+		log.Print("Failed to get todos for sessionID:", result.Error)
 		return nil, result.Error
 	}
 

@@ -12,8 +12,9 @@ import (
 
 // Represents a single client connection
 type Client struct {
-	id      uuid.UUID
-	Channel *chan []byte
+	clientID  uuid.UUID
+	sessionID string
+	Channel   *chan []byte
 }
 
 // The response structure of a realtime api
@@ -34,7 +35,7 @@ func New() Realtime {
 
 // Handles creating a stream and channel if the X-Muma-Stream header is set. If header
 // is not set, the raw json message is returned to the user like a standard REST api.
-func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMessage) {
+func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMessage, sessionID string) {
 	ctx := r.Context()
 
 	s := r.Header.Get("X-Muma-Stream")
@@ -55,7 +56,7 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 	ch := make(chan []byte, 10)
 	defer close(ch)
 
-	clientID := rt.AddClient(&ch)
+	clientID := rt.AddClient(&ch, sessionID)
 
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Content-Type", "application/json+ndjsonpatch")
@@ -80,11 +81,12 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 }
 
 // Adds a new client to the connection list
-func (rt *Realtime) AddClient(ch *chan []byte) uuid.UUID {
-	id := uuid.New()
-	client := Client{id: id, Channel: ch}
+func (rt *Realtime) AddClient(ch *chan []byte, sessionID string) uuid.UUID {
+	clientID := uuid.New()
+	client := Client{clientID: clientID, sessionID: sessionID, Channel: ch}
 	rt.Clients = append(rt.Clients, &client)
-	return id
+
+	return clientID
 }
 
 // Removes a client from the connection list
@@ -92,7 +94,7 @@ func (rt *Realtime) RemoveClient(clientID uuid.UUID) {
 	newClients := make([]*Client, 0)
 
 	for _, c := range rt.Clients {
-		if c.id != clientID {
+		if c.clientID != clientID {
 			newClients = append(newClients, c)
 		}
 	}
@@ -101,7 +103,7 @@ func (rt *Realtime) RemoveClient(clientID uuid.UUID) {
 }
 
 // Creates a new json patch
-func (rt *Realtime) PublishPatch(target json.RawMessage) {
+func (rt *Realtime) PublishPatch(target json.RawMessage, sessionID string) {
 	patch, _ := jsonpatch.CreatePatch(rt.Data, target)
 	patchJson, err := json.Marshal(patch)
 
@@ -111,7 +113,10 @@ func (rt *Realtime) PublishPatch(target json.RawMessage) {
 	}
 
 	for _, client := range rt.Clients {
-		*client.Channel <- patchJson
+		// TODO: figure out a way to optimize this without needing to loop through all clients
+		if sessionID == client.sessionID {
+			*client.Channel <- patchJson
+		}
 	}
 
 	rt.Data = target
