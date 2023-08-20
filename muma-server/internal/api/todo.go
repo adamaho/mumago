@@ -62,8 +62,8 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// marshal todos to json
-	targetStruct := realtime.RealtimeData{Data: targetDb}
-	target, err := json.Marshal(targetStruct)
+	targetRealtime := realtime.RealtimeData{Data: targetDb}
+	target, err := json.Marshal(targetRealtime)
 
 	if err != nil {
 		http.Error(w, "Failed to marshal new todos to json", http.StatusInternalServerError)
