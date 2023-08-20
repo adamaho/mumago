@@ -2,17 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"muma/internal/db"
 	"muma/internal/realtime"
-	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
-
-type Todos struct {
-	Data []db.Todo `json:"data"`
-}
 
 type TodosApi struct {
 	db *gorm.DB
@@ -33,7 +30,7 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	todos := Todos{Data: todosData}
+	todos := realtime.RealtimeData{Data: todosData}
 	todosJson, err := json.Marshal(todos)
 
 	if err != nil {
@@ -65,7 +62,7 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// marshal todos to json
-	targetStruct := Todos{Data: targetDb}
+	targetStruct := realtime.RealtimeData{Data: targetDb}
 	target, err := json.Marshal(targetStruct)
 
 	if err != nil {

@@ -16,6 +16,11 @@ type Client struct {
 	Channel *chan []byte
 }
 
+// The response structure of a realtime api
+type RealtimeData struct {
+	Data interface{} `json:"data"`
+}
+
 // Holds all of the active client connections
 type Realtime struct {
 	Clients []*Client

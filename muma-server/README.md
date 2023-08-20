@@ -21,3 +21,11 @@ DATABASE_DSN=""
 ```bash
 go run main.go
 ```
+
+## Todo
+
+- [ ] Look into idiomatic go error handling
+- [ ] Error handling should include some sort of common response type for errors
+- [ ] Consider using realtime as a way to create a `RealtimeApiResponse` struct or something
+- [ ] Consider moving Realtime init to TodosApi init
+- [ ] Look into ways to create a session for the todos. Some sort of unique identifier for a todolist session 
