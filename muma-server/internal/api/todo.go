@@ -33,7 +33,7 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	todos := realtime.RealtimeData{Data: todosData}
+	todos := realtime.Data{Data: todosData}
 	todosJson, err := json.Marshal(todos)
 
 	if err != nil {
@@ -66,7 +66,7 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// marshal todos to json
-	targetRealtime := realtime.RealtimeData{Data: targetDb}
+	targetRealtime := realtime.Data{Data: targetDb}
 	target, err := json.Marshal(targetRealtime)
 
 	if err != nil {
