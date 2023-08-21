@@ -26,7 +26,7 @@ func NewTodosApi(db *gorm.DB) TodosApi {
 func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 	sessionID := chi.URLParam(req, "sessionID")
 
-	todosData, err := db.GetTodosForSession(tApi.db, sessionID)
+	todosData, err := db.GetTodosBySessionID(tApi.db, sessionID)
 
 	if err != nil {
 		http.Error(w, "Failed to get todos from db", http.StatusInternalServerError)
@@ -58,7 +58,7 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// fetch all of the todos from the db
-	targetDb, err := db.GetTodosForSession(tApi.db, sessionID)
+	targetDb, err := db.GetTodosBySessionID(tApi.db, sessionID)
 
 	if err != nil {
 		http.Error(w, "Failed to get new todos from db", http.StatusInternalServerError)
