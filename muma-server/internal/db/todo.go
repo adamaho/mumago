@@ -39,9 +39,9 @@ func GetTodos(db *gorm.DB) ([]Todo, error) {
 }
 
 // Gets all todos for a specific sessionID
-func GetTodosForSession(db *gorm.DB, sessionID string) ([]Todo, error) {
+func GetTodosBySessionID(db *gorm.DB, sessionID string) ([]Todo, error) {
 	var todos []Todo
-	result := db.Find(&todos)
+	result := db.Where("session_id = ?", sessionID).Find(&todos)
 
 	if result.Error != nil {
 		log.Print("Failed to get todos for sessionID:", result.Error)
