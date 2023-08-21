@@ -17,12 +17,15 @@ type TodosApi struct {
 }
 
 // Creates a new TodosApi instance
-func NewTodosApi(db *gorm.DB, rt *realtime.Realtime) TodosApi {
-	return TodosApi{db, rt}
+func NewTodosApi(db *gorm.DB) TodosApi {
+	rt := realtime.New()
+	return TodosApi{db: db, rt: &rt}
 }
 
 // Returns all todos or an optional stream of todos
 func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
+	sessionID := chi.URLParam(req, "sessionID")
+
 	todosData, err := db.GetTodos(tApi.db)
 
 	if err != nil {
@@ -30,7 +33,7 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	todos := realtime.RealtimeData{Data: todosData}
+	todos := realtime.Data{Data: todosData}
 	todosJson, err := json.Marshal(todos)
 
 	if err != nil {
@@ -38,15 +41,16 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tApi.rt.Stream(w, req, todosJson)
+	tApi.rt.Stream(w, req, todosJson, sessionID)
 }
 
 // Creates a new todo
 func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
+	sessionID := chi.URLParam(req, "sessionID")
 	task := chi.URLParam(req, "task")
 
 	// create the todo
-	todoID, err := db.CreateTodo(tApi.db, task)
+	todoID, err := db.CreateTodo(tApi.db, sessionID, task)
 
 	if err != nil {
 		http.Error(w, "Failed to create todo", http.StatusInternalServerError)
@@ -62,14 +66,14 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// marshal todos to json
-	targetRealtime := realtime.RealtimeData{Data: targetDb}
+	targetRealtime := realtime.Data{Data: targetDb}
 	target, err := json.Marshal(targetRealtime)
 
 	if err != nil {
 		http.Error(w, "Failed to marshal new todos to json", http.StatusInternalServerError)
 	}
 
-	tApi.rt.PublishPatch(target)
+	tApi.rt.PublishPatch(target, sessionID)
 
 	// fetch the new todo from the db to return to the user
 	newTodo, err := db.GetTodoByID(tApi.db, todoID)
