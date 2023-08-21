@@ -10,12 +10,7 @@ import (
 	"github.com/mattbaird/jsonpatch"
 )
 
-// ## New Streaming
-// - Stream method needs to create a new session if one doesnt exist and add a new client to it
-// - If there is already a session, add a new client to it
-// - When the last client disconnects from the session, shut it down so we can save on memory
-// - Add AddClient and RemoveClient methods to Session struct instead of Realtime struct
-// - Add AddSession and RemoveSession methods to Realtime struct
+// TODO: Update to split up todos based on session in db
 
 // Realtime supports http handlers. The first is `Stream` which supports both a plain json API response
 // and a streaming jsonpatch response.
