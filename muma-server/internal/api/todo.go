@@ -31,7 +31,6 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		helpers.HttpError(w, helpers.DatabaseError, "")
-		helpers.Log(helpers.Error, err)
 		return
 	}
 
@@ -40,7 +39,7 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		helpers.HttpError(w, helpers.MarshalError, "")
-		helpers.Log(helpers.Error, err)
+		helpers.Log(helpers.Error, "Failed to marshal todos", err)
 		return
 	}
 
@@ -57,7 +56,6 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		helpers.HttpError(w, helpers.DatabaseError, "")
-		helpers.Log(helpers.Error, err)
 		return
 	}
 
@@ -66,7 +64,6 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		helpers.HttpError(w, helpers.DatabaseError, "")
-		helpers.Log(helpers.Error, err)
 		return
 	}
 
@@ -76,7 +73,7 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		helpers.HttpError(w, helpers.MarshalError, "")
-		helpers.Log(helpers.Error, err)
+		helpers.Log(helpers.Error, "Failed to marshal target", err)
 	}
 
 	tApi.rt.PublishPatch(target, sessionID)
@@ -86,14 +83,13 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		helpers.HttpError(w, helpers.DatabaseError, "")
-		helpers.Log(helpers.Error, err)
 	}
 
 	newTodoJson, err := json.Marshal(newTodo)
 
 	if err != nil {
 		helpers.HttpError(w, helpers.MarshalError, "")
-		helpers.Log(helpers.Error, err)
+		helpers.Log(helpers.Error, "Failed to marshal new todos", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
