@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"muma/internal/db"
+	"muma/internal/helpers"
 	"muma/internal/realtime"
 
 	"github.com/go-chi/chi/v5"
@@ -29,7 +30,8 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 	todosData, err := db.GetTodosBySessionID(tApi.db, sessionID)
 
 	if err != nil {
-		http.Error(w, "Failed to get todos from db", http.StatusInternalServerError)
+		helpers.HttpError(w, helpers.DatabaseError, "")
+		helpers.Log(helpers.Error, err)
 		return
 	}
 
@@ -37,7 +39,8 @@ func (tApi *TodosApi) GetTodos(w http.ResponseWriter, req *http.Request) {
 	todosJson, err := json.Marshal(todos)
 
 	if err != nil {
-		http.Error(w, "Failed to marshal todos to json", http.StatusInternalServerError)
+		helpers.HttpError(w, helpers.MarshalError, "")
+		helpers.Log(helpers.Error, err)
 		return
 	}
 
@@ -53,7 +56,8 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	todoID, err := db.CreateTodo(tApi.db, sessionID, task)
 
 	if err != nil {
-		http.Error(w, "Failed to create todo", http.StatusInternalServerError)
+		helpers.HttpError(w, helpers.DatabaseError, "")
+		helpers.Log(helpers.Error, err)
 		return
 	}
 
@@ -61,7 +65,8 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	targetDb, err := db.GetTodosBySessionID(tApi.db, sessionID)
 
 	if err != nil {
-		http.Error(w, "Failed to get new todos from db", http.StatusInternalServerError)
+		helpers.HttpError(w, helpers.DatabaseError, "")
+		helpers.Log(helpers.Error, err)
 		return
 	}
 
@@ -70,7 +75,8 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	target, err := json.Marshal(targetRealtime)
 
 	if err != nil {
-		http.Error(w, "Failed to marshal new todos to json", http.StatusInternalServerError)
+		helpers.HttpError(w, helpers.MarshalError, "")
+		helpers.Log(helpers.Error, err)
 	}
 
 	tApi.rt.PublishPatch(target, sessionID)
@@ -79,13 +85,15 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	newTodo, err := db.GetTodoByID(tApi.db, todoID)
 
 	if err != nil {
-		http.Error(w, "Failed to get new todo from db", http.StatusInternalServerError)
+		helpers.HttpError(w, helpers.DatabaseError, "")
+		helpers.Log(helpers.Error, err)
 	}
 
 	newTodoJson, err := json.Marshal(newTodo)
 
 	if err != nil {
-		http.Error(w, "Failed to marshal new todo to json", http.StatusInternalServerError)
+		helpers.HttpError(w, helpers.MarshalError, "")
+		helpers.Log(helpers.Error, err)
 	}
 
 	w.WriteHeader(http.StatusOK)
