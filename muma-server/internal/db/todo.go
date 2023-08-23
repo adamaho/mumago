@@ -2,6 +2,7 @@ package db
 
 import (
 	"log"
+	"muma/internal/helpers"
 
 	"gorm.io/gorm"
 )
@@ -18,7 +19,7 @@ func CreateTodo(db *gorm.DB, sessionID string, task string) (uint, error) {
 	result := db.Create(&t)
 
 	if result.Error != nil {
-		log.Print("Failed to create new todo:", result.Error)
+		helpers.Log(helpers.Error, "Failed to CreateTodo in database", result.Error)
 		return 0, result.Error
 	}
 
@@ -44,7 +45,7 @@ func GetTodosBySessionID(db *gorm.DB, sessionID string) ([]Todo, error) {
 	result := db.Where("session_id = ?", sessionID).Find(&todos)
 
 	if result.Error != nil {
-		log.Print("Failed to get todos for sessionID:", result.Error)
+		helpers.Log(helpers.Error, "Failed to GetTodosBySessionID from database", result.Error)
 		return nil, result.Error
 	}
 
@@ -57,7 +58,7 @@ func GetTodoByID(db *gorm.DB, todoID uint) (Todo, error) {
 	result := db.First(&todo, todoID)
 
 	if result.Error != nil {
-		log.Print("Failed to get todo with id:", todoID)
+		helpers.Log(helpers.Error, "Failed to GetTodoByID from database", result.Error)
 		return Todo{}, result.Error
 	}
 

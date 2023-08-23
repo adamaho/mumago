@@ -23,7 +23,7 @@ func logLevelString(l LogLevel) string {
 	}
 }
 
-func Log(l LogLevel, e error) {
+func Log(l LogLevel, info string, e error) {
 	level := logLevelString(l)
-	log.Printf("%s: %s", level, e)
+	log.Printf("%s - %s: %s", level, info, e)
 }
