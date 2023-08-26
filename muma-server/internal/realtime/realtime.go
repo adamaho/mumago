@@ -60,9 +60,14 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 	ch := make(chan []byte, 10)
 	defer close(ch)
 
-	session := rt.CreateSession(sessionID)
-	clientID := session.AddClient(&ch)
+	// check if there is already a session for the current sessionID
+	session, ok := rt.sessions[sessionID]
 
+	if !ok {
+		session = rt.CreateSession(sessionID)
+	}
+
+	clientID := session.AddClient(&ch)
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Content-Type", "application/json+ndjsonpatch")
 	w.WriteHeader(http.StatusOK)
