@@ -34,6 +34,11 @@ func main() {
 		r.Post("/todos/{sessionID}/{task}", todosApi.CreateTodo)
 	})
 
+	r.Group(func(r chi.Router) {
+		tablesApi := api.NewTableApi(db)
+		r.Post("/api/v1/tables", tablesApi.CreateTable)
+	})
+
 	log.Println("starting todos server at https://localhost:3000")
 
 	err := http.ListenAndServeTLS("localhost:3000", "cert.pem", "key.pem", r)

@@ -10,8 +10,6 @@ import (
 	"github.com/mattbaird/jsonpatch"
 )
 
-// TODO: Update to split up todos based on session in db
-
 // Realtime supports http handlers. The first is `Stream` which supports both a plain json API response
 // and a streaming jsonpatch response.
 //

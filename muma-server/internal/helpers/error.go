@@ -8,8 +8,9 @@ import (
 type ErrorCode string
 
 const (
-	DatabaseError ErrorCode = "DATABASE_ERROR"
-	MarshalError  ErrorCode = "MARSHAL_ERROR"
+	DatabaseError      ErrorCode = "DATABASE_ERROR"
+	MarshalError       ErrorCode = "MARSHAL_ERROR"
+	InvalidRequestBody ErrorCode = "INVALID_REQUEST_BODY"
 )
 
 // Converts an ErrorCode into a status code
@@ -19,6 +20,8 @@ func StatusCode(e ErrorCode) int {
 		return http.StatusInternalServerError
 	case MarshalError:
 		return http.StatusInternalServerError
+	case InvalidRequestBody:
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}
@@ -31,6 +34,8 @@ func Message(e ErrorCode) string {
 		return "An error occured while trying to execute a database operation"
 	case MarshalError:
 		return "An error occured while trying marshal json"
+	case InvalidRequestBody:
+		return "Invalid request body was provided"
 	default:
 		return "An internal error occured"
 	}
@@ -38,9 +43,9 @@ func Message(e ErrorCode) string {
 
 // Representation of the response body of an error
 type httpErrorResponse struct {
-	Code    ErrorCode
-	Message string
-	Info    string
+	Code    ErrorCode `json:"code"`
+	Message string    `json:"message"`
+	Info    string    `json:"info"`
 }
 
 // Returns an http error response
