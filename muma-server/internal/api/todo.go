@@ -92,6 +92,8 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 		helpers.Log(helpers.Error, "Failed to marshal new todos", err)
 	}
 
+	// TODO: create a helper function for this
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(newTodoJson)
 }
