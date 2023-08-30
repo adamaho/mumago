@@ -31,12 +31,9 @@ func main() {
 		todosApi := api.NewTodosApi(db)
 
 		r.Get("/todos/{sessionID}", todosApi.GetTodos)
+		// TODO: Make this so that the task is the request body
 		r.Post("/todos/{sessionID}/{task}", todosApi.CreateTodo)
-	})
-
-	r.Group(func(r chi.Router) {
-		tablesApi := api.NewTableApi(db)
-		r.Post("/api/v1/tables", tablesApi.CreateTable)
+		r.Put("/api/v1/todos/{sessionID}/{taskID}", todosApi.UpdateTodo)
 	})
 
 	log.Println("starting todos server at https://localhost:3000")

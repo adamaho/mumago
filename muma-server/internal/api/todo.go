@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"muma/internal/db"
 	"muma/internal/helpers"
@@ -51,7 +52,6 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	sessionID := chi.URLParam(req, "sessionID")
 	task := chi.URLParam(req, "task")
 
-	// create the todo
 	todoID, err := db.CreateTodo(tApi.db, sessionID, task)
 
 	if err != nil {
@@ -59,7 +59,6 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// fetch all of the todos from the db
 	targetDb, err := db.GetTodosBySessionID(tApi.db, sessionID)
 
 	if err != nil {
@@ -67,7 +66,6 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// marshal todos to json
 	targetRealtime := realtime.Data{Data: targetDb}
 	target, err := json.Marshal(targetRealtime)
 
@@ -76,9 +74,15 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 		helpers.Log(helpers.Error, "Failed to marshal target", err)
 	}
 
-	tApi.rt.PublishPatch(target, sessionID)
+	patch, err := tApi.rt.GeneratePatch(target, sessionID)
 
-	// fetch the new todo from the db to return to the user
+	if err != nil {
+		helpers.HttpError(w, helpers.PatchError, "")
+		helpers.Log(helpers.Error, "Failed to generate patch", err)
+	}
+
+	tApi.rt.PublishMsg(patch, sessionID)
+
 	newTodo, err := db.GetTodoByID(tApi.db, todoID)
 
 	if err != nil {
@@ -87,6 +91,7 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 
 	newTodoJson, err := json.Marshal(newTodo)
 
+	// TODO: figure out a way to not have to do this down the chain
 	if err != nil {
 		helpers.HttpError(w, helpers.MarshalError, "")
 		helpers.Log(helpers.Error, "Failed to marshal new todos", err)
@@ -96,4 +101,78 @@ func (tApi *TodosApi) CreateTodo(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(newTodoJson)
+}
+
+// Updates a todo
+func (tApi *TodosApi) UpdateTodo(w http.ResponseWriter, req *http.Request) {
+	sessionID := chi.URLParam(req, "sessionID")
+	taskIDParam := chi.URLParam(req, "taskID")
+
+	taskID, e := strconv.ParseUint(taskIDParam, 10, 64)
+
+	if e != nil {
+		helpers.Log(helpers.Error, "Failed to parse taskID from params", e)
+		helpers.HttpError(w, helpers.InvalidRequestParams, "")
+		return
+	}
+
+	var t db.TodoForm
+	err := json.NewDecoder(req.Body).Decode(&t)
+
+	if err != nil {
+		helpers.Log(helpers.Error, "Failed to parse TodoForm request body", err)
+		helpers.HttpError(w, helpers.InvalidRequestBody, "")
+		return
+	}
+
+	todoID, err := db.UpdateTodoByID(tApi.db, uint(taskID), sessionID, t)
+
+	if err != nil {
+		helpers.HttpError(w, helpers.DatabaseError, "")
+		return
+	}
+
+	// TODO: Figure out how to generalize this code so that it isnt so crazy. Pretty much the same thing from here down in order to create a new patch
+	targetDb, err := db.GetTodosBySessionID(tApi.db, sessionID)
+
+	if err != nil {
+		helpers.HttpError(w, helpers.DatabaseError, "")
+		return
+	}
+
+	targetRealtime := realtime.Data{Data: targetDb}
+	target, err := json.Marshal(targetRealtime)
+
+	if err != nil {
+		helpers.HttpError(w, helpers.MarshalError, "")
+		helpers.Log(helpers.Error, "Failed to marshal target", err)
+	}
+
+	patch, err := tApi.rt.GeneratePatch(target, sessionID)
+
+	if err != nil {
+		helpers.HttpError(w, helpers.PatchError, "")
+		helpers.Log(helpers.Error, "Failed to generate patch", err)
+	}
+
+	tApi.rt.PublishMsg(patch, sessionID)
+
+	updatedTodo, err := db.GetTodoByID(tApi.db, todoID)
+
+	if err != nil {
+		helpers.HttpError(w, helpers.DatabaseError, "")
+	}
+
+	updatedTodoJson, err := json.Marshal(updatedTodo)
+
+	// TODO: figure out a way to not have to do this down the chain
+	if err != nil {
+		helpers.HttpError(w, helpers.MarshalError, "")
+		helpers.Log(helpers.Error, "Failed to marshal updated todo", err)
+	}
+
+	// TODO: create a helper function for this
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(updatedTodoJson)
 }
