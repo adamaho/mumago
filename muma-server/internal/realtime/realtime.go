@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"muma/internal/helpers"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -92,12 +93,11 @@ func (rt *Realtime) Stream(w http.ResponseWriter, r *http.Request, d json.RawMes
 }
 
 // Creates a new json patch
-func (rt *Realtime) PublishPatch(target json.RawMessage, sessionID string) {
+func (rt *Realtime) GeneratePatch(target json.RawMessage, sessionID string) (json.RawMessage, error) {
 	session, ok := rt.sessions[sessionID]
 
 	if !ok {
-		fmt.Println("There is no session")
-		return
+		return nil, fmt.Errorf("Failed to get session for sessionID: %s", sessionID)
 	}
 
 	patch, _ := jsonpatch.CreatePatch(session.Data, target)
@@ -105,14 +105,26 @@ func (rt *Realtime) PublishPatch(target json.RawMessage, sessionID string) {
 
 	if err != nil {
 		log.Print("Failed to marshal json for patch")
+		return nil, err
+	}
+
+	session.Data = target
+
+	return patchJson, nil
+}
+
+// Creates a new json patch
+func (rt *Realtime) PublishMsg(msg json.RawMessage, sessionID string) {
+	session, ok := rt.sessions[sessionID]
+
+	if !ok {
+		helpers.Log(helpers.Error, "Failed to get session", nil)
 		return
 	}
 
 	for _, client := range session.Clients {
-		*client.Channel <- patchJson
+		*client.Channel <- msg
 	}
-
-	session.Data = target
 }
 
 // Holds all of the active client connections

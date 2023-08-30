@@ -10,6 +10,7 @@ import (
 type Todo struct {
 	ID        uint   `json:"todo_id" gorm:"primaryKey"`
 	Task      string `json:"task"`
+	Checked   bool   `json:"checked" gorm:"default:false"`
 	SessionID string `json:"session_id"`
 }
 
@@ -63,4 +64,21 @@ func GetTodoByID(db *gorm.DB, todoID uint) (Todo, error) {
 	}
 
 	return todo, nil
+}
+
+type TodoForm struct {
+	Task    string `json:"task"`
+	Checked bool   `json:"checked"`
+}
+
+// Gets all todos for a specific sessionID
+func UpdateTodoByID(db *gorm.DB, todoID uint, sessionID string, todo TodoForm) (uint, error) {
+	result := db.Save(&Todo{ID: todoID, SessionID: sessionID, Task: todo.Task, Checked: todo.Checked})
+
+	if result.Error != nil {
+		helpers.Log(helpers.Error, "Failed to UpdateTodoByID from database", result.Error)
+		return 0, result.Error
+	}
+
+	return todoID, nil
 }

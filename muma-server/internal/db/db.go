@@ -29,7 +29,7 @@ func New() *Database {
 // Creates a new connection to the database
 func (d *Database) Connect() *gorm.DB {
 	db, err := gorm.Open(mysql.Open(d.dsn), &gorm.Config{})
-	db.AutoMigrate(&Todo{}, &Table{})
+	db.AutoMigrate(&Todo{})
 
 	if err != nil {
 		log.Fatal("Failed to connect to db:", err)
